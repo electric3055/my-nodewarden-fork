@@ -18,6 +18,7 @@ crons = [ "*/5 * * * *" ]
 [[d1_databases]]
 binding = "DB"
 database_name = "nodewarden-db"
+database_id = "b3287a80-f2d5-4b61-a98f-c97f014976ca"
 
 [[durable_objects.bindings]]
 name = "NOTIFICATIONS_HUB"
@@ -38,3 +39,4 @@ new_sqlite_classes = [ "NotificationsHub" ]
 [[migrations]]
 tag = "v2-backup-transfer-runner"
 new_sqlite_classes = [ "BackupTransferRunner" ]
+
