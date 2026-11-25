@@ -21,10 +21,10 @@ jobs:
       - name: Sync latest upstream release (shuaiplus/nodewarden)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          git config user.name
-          git config 
-        
-          LATEST_TAG=$(curl -sS https://api.github.co
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/shuaiplus/nodewarden.git || true
+          LATEST_TAG=$(curl -sS https://api.github.com/repos/shuaiplus/nodewarden/releases/latest | jq -r '.tag_name')
           echo "Syncing release tag: ${LATEST_TAG}"
           git fetch upstream tag "${LATEST_TAG}"
           # Merge upstream release while keeping local wrangler.toml database_id binding on conflict
