@@ -1,42 +1,39 @@
-name: Notify Telegram on Update
+name: Notify Telegram on New Release
 
 on:
-  workflow_run:
-    workflows: ["Sync Upstream & Deploy NodeWarden"]
-    types: [completed]
+  schedule:
+    - cron: '0 6 * * *' # Daily at 06:00 UTC (08:00/09:00 Israel time)
   workflow_dispatch:
 
 jobs:
-  notify:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+  check-release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest main
+      - name: Checkout fork
         uses: actions/checkout@v4
-        with:
-          ref: main
 
-      - name: Send Telegram notification if updated
+      - name: Check upstream release and notify Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          BEFORE_SHA: ${{ github.event.workflow_run.head_sha }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          CURRENT_SHA=$(git rev-parse HEAD)
+          CURRENT_VER="v$(jq -r '.version' package.json)"
+          RELEASE_JSON=$(curl -sS https://api.github.com/repos/shuaiplus/nodewarden/releases/latest)
+          LATEST_TAG=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
+          RELEASE_NAME=$(echo "$RELEASE_JSON" | jq -r '.name')
+          RELEASE_URL=$(echo "$RELEASE_JSON" | jq -r '.html_url')
+          DEPLOY_URL="${{ github.server_url }}/${{ github.repository }}/actions/workflows/sync-and-deploy.yml"
 
-          if [ "$EVENT_NAME" != "workflow_dispatch" ] && [ "$CURRENT_SHA" = "$BEFORE_SHA" ]; then
-            echo "No new commits synced. Skipping notification."
+          echo "Current: ${CURRENT_VER} | Latest upstream: ${LATEST_TAG}"
+
+          if [ "$EVENT_NAME" != "workflow_dispatch" ] && [ "$CURRENT_VER" = "$LATEST_TAG" ]; then
+            echo "Already on latest release. Skipping notification."
             exit 0
           fi
 
-          VERSION=$(jq -r '.version' package.json)
-          COMMIT_MSG=$(git log -1 --pretty=%s)
-          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${CURRENT_SHA}"
-
-          TEXT=$(printf "🚀 <b>NodeWarden Updated</b>\n<b>Version:</b> <code>v%s</code>\n<b>Commit:</b> %s\n<a href=\"%s\">View Commit</a>" "$VERSION" "$COMMIT_MSG" "$COMMIT_URL")
+          TEXT=$(printf "🔔 <b>New NodeWarden Release Available</b>\n<b>Latest:</b> <code>%s</code> (%s)\n<b>Installed:</b> <code>%s</code>\n\n📄 <a href=\"%s\">Read Release Notes</a>\n🚀 <a href=\"%s\">1-Click Deploy in GitHub Actions</a>" \
+            "$LATEST_TAG" "$RELEASE_NAME" "$CURRENT_VER" "$RELEASE_URL" "$DEPLOY_URL")
 
           curl -sS -f -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -d chat_id="${CHAT_ID}" \
