@@ -2,7 +2,7 @@ name: Notify Telegram on Update
 
 on:
   workflow_run:
-    workflows: ["Sync upstream"]
+    workflows: ["Sync Upstream & Deploy NodeWarden"]
     types: [completed]
   workflow_dispatch:
 
